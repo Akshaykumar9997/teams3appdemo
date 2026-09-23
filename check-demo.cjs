@@ -1,13 +1,16 @@
 // Run: node check-demo.cjs (with the local preview on port 8765).
 const assert = require('node:assert/strict');
+const path = require('node:path');
+const artifacts = path.join(require('node:os').tmpdir(), 'team3-demo-checks');
+require('node:fs').mkdirSync(artifacts, { recursive: true });
 const { chromium } = require('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'msedge' });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('http://127.0.0.1:8765/team3_demo.html');
-  await page.screenshot({ path: 'D:/teams3/desktop-preview.png', fullPage: true });
+  await page.goto('http://127.0.0.1:8765/index.html');
+  await page.screenshot({ path: path.join(artifacts, 'desktop-preview.png'), fullPage: true });
   assert.equal(await page.locator('h1').textContent(), 'Good morning, Team3.');
   await page.evaluate(() => openProject('p0'));
   await page.getByRole('button', { name: 'Complete & hand off', exact: true }).click();
@@ -21,7 +24,7 @@ const { chromium } = require('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary
   assert(await page.locator('#modal button:has-text("Complete & hand off")').isDisabled());
   await page.evaluate(() => closeModal());
   await page.evaluate(() => { mobileTab = 'approval'; go('mobile'); });
-  await page.screenshot({ path: 'D:/teams3/mobile-preview.png', fullPage: true });
+  await page.screenshot({ path: path.join(artifacts, 'mobile-preview.png'), fullPage: true });
   await page.locator('.phone').getByRole('button', { name: 'Approve', exact: true }).click();
   await page.locator('#modal').getByRole('button', { name: 'Approve & release to client' }).click();
   assert.equal(await page.evaluate(() => project('p3').stage), 6);
@@ -55,8 +58,10 @@ const { chromium } = require('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.evaluate(() => { mobileTab = 'chat'; mobileChannel = true; go('mobile'); });
   assert(await page.locator('.phone').getByText('Please check the new site measurement notes.').isVisible());
-  await page.evaluate(() => go('attendance'));
-  await page.getByRole('button', { name: 'Clock in', exact: true }).click();
+  await page.evaluate(() => openEmployee('emp-4'));
+  await page.locator('.demo-controls summary').click();
+  await page.getByRole('button', { name: 'Simulate clock in', exact: true }).click();
+  await page.locator('#modal [name=project]').selectOption('p3');
   await page.getByRole('button', { name: 'Start session', exact: true }).click();
   assert.equal(await page.evaluate(() => state.sessions.filter(s => s.employee === 'Meena J.' && s.end === null).length), 1);
   const clockId = await page.evaluate(() => state.sessions.at(-1).id);
@@ -102,7 +107,7 @@ const { chromium } = require('C:/Users/ADMIN/.cache/codex-runtimes/codex-primary
     await page.evaluate(route => go(route), route);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), route + ' should not overflow horizontally');
   }
-  await page.screenshot({ path: 'D:/teams3/responsive-preview.png', fullPage: true });
+  await page.screenshot({ path: path.join(artifacts, 'responsive-preview.png'), fullPage: true });
   assert.deepEqual(errors, []);
   console.log('PASS: sequential/direct routing, blockers, owner/client gates, revision invalidation, version history, file persistence, chat sync, clocks, exports, all screens and responsive overflow.');
   await browser.close();
